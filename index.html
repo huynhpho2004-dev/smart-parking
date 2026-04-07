@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Parking TDTU - Quản lý & Reset</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; text-align: center; padding: 20px; background-color: #f0f2f5; }
+        .container { max-width: 450px; margin: auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h2 { color: #1a73e8; margin-bottom: 5px; }
+        
+        /* Nút Slot */
+        .slot-btn { 
+            width: 100%; padding: 15px; margin: 10px 0; 
+            font-size: 16px; font-weight: bold; cursor: pointer; 
+            border: none; border-radius: 12px; background-color: #28a745; 
+            color: white; transition: 0.3s; 
+        }
+        .slot-btn.booked { background-color: #ffc107 !important; color: #000; border: 2px dashed #000; }
+        .slot-btn.occupied { background-color: #dc3545 !important; cursor: not-allowed; color: white; }
+        
+        /* Nút Reset */
+        .reset-btn {
+            margin-top: 25px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: 0.3s;
+            width: 100%;
+        }
+        .reset-btn:hover { background-color: #5a6268; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
+        .status { margin-top: 20px; font-weight: bold; color: #1a73e8; min-height: 24px; }
+        .note { font-size: 12px; color: #666; margin-top: 15px; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🅿️ Smart Parking TDTU</h2>
+    <p>Cài đặt mã PIN tự chọn (V9 - V12)</p>
+    
+    <button id="btn-v2" class="slot-btn" onclick="handleSlot('v2', 'v9', 1)">Slot 1</button>
+    <button id="btn-v3" class="slot-btn" onclick="handleSlot('v3', 'v10', 2)">Slot 2</button>
+    <button id="btn-v4" class="slot-btn" onclick="handleSlot('v4', 'v11', 3)">Slot 4</button>
+    <button id="btn-v5" class="slot-btn" onclick="handleSlot('v5', 'v12', 4)">Slot 4</button>
+
+    <div id="message" class="status">Sẵn sàng</div>
+    
+    <button class="reset-btn" onclick="resetAllSlots()">♻️ Reset Toàn Bộ Bãi Xe</button>
+    
+    <p class="note">💡 Ô vàng: Nhập PIN để sửa/xóa biển số</p>
+</div>
+
+<script>
+    const AUTH_TOKEN = "8YURsnU3LJgW_eJxrU40lhg4WcLv-NnU";
+    
+    const SLOT_MAP = [
+        { plate: 'v2', pin: 'v9', id: 1 },
+        { plate: 'v3', pin: 'v10', id: 2 },
+        { plate: 'v4', pin: 'v11', id: 3 },
+        { plate: 'v5', pin: 'v12', id: 4 }
+    ];
+
+    async function syncStatus() {
+        for (let s of SLOT_MAP) {
+            try {
+                const res = await fetch(`https://blynk.cloud/external/api/get?token=${AUTH_TOKEN}&${s.plate}`);
+                const data = await res.text();
+                const btn = document.getElementById('btn-' + s.plate);
+                
+                if (data.includes("Có xe")) {
+                    btn.className = "slot-btn occupied";
+                    btn.innerText = `Slot ${s.id} (CÓ XE: ${data.split('(')[1]?.replace(')','')})`;
+                    btn.disabled = true;
+                } else if (data.includes("Đã đặt")) {
+                    btn.className = "slot-btn booked";
+                    btn.innerText = `Slot ${s.id} (CHỜ: ${data.split('(')[1]?.replace(')','')})`;
+                    btn.disabled = false;
+                } else {
+                    btn.className = "slot-btn";
+                    btn.innerText = `Đặt Slot ${s.id}`;
+                    btn.disabled = false;
+                }
+            } catch (e) { console.error("Lỗi đồng bộ:", e); }
+        }
+    }
+
+    async function handleSlot(platePin, pinPin, id) {
+        const btn = document.getElementById('btn-' + platePin);
+        const isBooked = btn.classList.contains('booked');
+
+        if (isBooked) {
+            let inputPin = prompt("🔐 Nhập mã PIN để xác thực quyền sửa đổi:");
+            if (!inputPin) return;
+
+            try {
+                const res = await fetch(`https://blynk.cloud/external/api/get?token=${AUTH_TOKEN}&${pinPin}`);
+                let savedPin = await res.text();
+                savedPin = savedPin.replace(/[\[\]\"]/g, "").trim();
+                inputPin = inputPin.trim();
+
+                if (inputPin === savedPin) {
+                    let action = prompt("✅ Đúng PIN!\n- Nhập biển số mới để đổi.\n- Để trống để XÓA đặt chỗ.");
+                    if (action === null) return;
+
+                    if (action.trim() === "") {
+                        await fetch(`https://blynk.cloud/external/api/update?token=${AUTH_TOKEN}&${platePin}=Trống`);
+                        await fetch(`https://blynk.cloud/external/api/update?token=${AUTH_TOKEN}&${pinPin}=0`);
+                    } else {
+                        const newStatus = `Đã đặt (${action.toUpperCase()})`;
+                        await fetch(`https://blynk.cloud/external/api/update?token=${AUTH_TOKEN}&${platePin}=${encodeURIComponent(newStatus)}`);
+                    }
+                    syncStatus();
+                } else {
+                    alert("❌ Sai mã PIN!");
+                }
+            } catch (e) { alert("Lỗi kết nối!"); }
+        } else {
+            let plate = prompt("🚘 Nhập biển số xe:");
+            if (!plate) return;
+            let pin = prompt("🔑 Tạo mã PIN bảo mật:");
+            if (!pin) return;
+
+            const status = `Đã đặt (${plate.toUpperCase()})`;
+            await fetch(`https://blynk.cloud/external/api/update?token=${AUTH_TOKEN}&${platePin}=${encodeURIComponent(status)}`);
+            await fetch(`https://blynk.cloud/external/api/update?token=${AUTH_TOKEN}&${pinPin}=${encodeURIComponent(pin.trim())}`);
+            syncStatus();
+        }
+    }
+
+    // --- HÀM RESET DÀNH CHO TEST ---
+    async function resetAllSlots() {
+        if (!confirm("Phố có chắc muốn xóa sạch dữ liệu và mã PIN để test lại từ đầu không?")) return;
+        
+        const msgDiv = document.getElementById('message');
+        msgDiv.innerText = "⏳ Đang dọn dẹp bãi xe...";
+        msgDiv.style.color = "#ff9800";
+
+        for (let s of SLOT_MAP) {
+            try {
+                // Đưa biển số về trạng thái Trống
+                await fetch(`https://blynk.cloud/external/api/update?token=${AUTH_TOKEN}&${s.plate}=Trống`);
+                // Đưa mã PIN về mặc định (0)
+                await fetch(`https://blynk.cloud/external/api/update?token=${AUTH_TOKEN}&${s.pin}=0`);
+            } catch (e) { console.error("Lỗi khi reset " + s.plate); }
+        }
+
+        msgDiv.innerText = "✅ Đã Reset thành công!";
+        msgDiv.style.color = "#28a745";
+        syncStatus();
+    }
+
+    window.onload = () => { syncStatus(); setInterval(syncStatus, 8000); };
+</script>
+</body>
+</html>
