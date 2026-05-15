@@ -1,162 +1,1153 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Parking TDTU - Quản lý & Reset</title>
-    <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; text-align: center; padding: 20px; background-color: #f0f2f5; }
-        .container { max-width: 450px; margin: auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        h2 { color: #1a73e8; margin-bottom: 5px; }
-        
-        /* Nút Slot */
-        .slot-btn { 
-            width: 100%; padding: 15px; margin: 10px 0; 
-            font-size: 16px; font-weight: bold; cursor: pointer; 
-            border: none; border-radius: 12px; background-color: #28a745; 
-            color: white; transition: 0.3s; 
-        }
-        .slot-btn.booked { background-color: #ffc107 !important; color: #000; border: 2px dashed #000; }
-        .slot-btn.occupied { background-color: #dc3545 !important; cursor: not-allowed; color: white; }
-        
-        /* Nút Reset */
-        .reset-btn {
-            margin-top: 25px;
-            background-color: #6c757d;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            transition: 0.3s;
-            width: 100%;
-        }
-        .reset-btn:hover { background-color: #5a6268; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Parking TDTU</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Be+Vietnam+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #f5f7fa;
+    --surface:  #ffffff;
+    --surface2: #eef1f5;
+    --border:   #d0d7de;
+    --green:    #1a7f37;
+    --yellow:   #9a6700;
+    --red:      #cf222e;
+    --blue:     #0969da;
+    --orange:   #bc4c00;
+    --text:     #1f2328;
+    --muted:    #656d76;
+    --mono:     'JetBrains Mono', monospace;
+    --sans:     'Be Vietnam Pro', sans-serif;
+  }
 
-        .status { margin-top: 20px; font-weight: bold; color: #1a73e8; min-height: 24px; }
-        .note { font-size: 12px; color: #666; margin-top: 15px; font-style: italic; }
-    </style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px 16px 40px;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .header h1 {
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--blue) 0%, var(--green) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header p { color: var(--muted); font-size: 0.82rem; margin-top: 4px; }
+
+  /* ── Tổng quan ── */
+  .overview {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .ov-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 10px;
+    text-align: center;
+  }
+  .ov-card .num {
+    font-family: var(--mono);
+    font-size: 1.9rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .ov-card .lbl { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+  .ov-card.free  .num { color: var(--green); }
+  .ov-card.used  .num { color: var(--red); }
+  .ov-card.total .num { color: var(--blue); }
+
+  /* ── Alert camera ── */
+  .cam-alert {
+    display: none;
+    background: linear-gradient(135deg, #fffbeb, #fff8dc);
+    border: 1.5px solid var(--yellow);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 16px;
+    animation: pulse-border 1.2s infinite;
+  }
+  @keyframes pulse-border {
+    0%,100% { border-color: var(--yellow); }
+    50%      { border-color: #ffd700; }
+  }
+  .cam-alert .alert-head {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--yellow);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .cam-alert .plate-badge {
+    font-family: var(--mono);
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text);
+    background: rgba(0,0,0,0.06);
+    padding: 6px 14px;
+    display: inline-block;
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+  }
+  .cam-alert .alert-mode {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  /* ── Bước xác nhận biển số ── */
+  .confirm-btns {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .btn-correct {
+    flex: 1;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.88rem;
+    padding: 11px;
+    cursor: pointer;
+    transition: opacity .2s;
+  }
+  .btn-correct:hover { opacity: .85; }
+  .btn-retake {
+    flex: 1;
+    background: var(--surface2);
+    color: var(--text);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.88rem;
+    padding: 11px;
+    cursor: pointer;
+    transition: opacity .2s;
+  }
+  .btn-retake:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── Thông báo sai PIN ── */
+  .wrong-pin-msg {
+    display: none;
+    background: #fff0f0;
+    border: 1.5px solid var(--red);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--red);
+    animation: shake .3s ease;
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25%      { transform: translateX(-6px); }
+    75%      { transform: translateX(6px); }
+  }
+  .tries-left {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .pin-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 1rem;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color .2s;
+    letter-spacing: 3px;
+  }
+  .pin-input:focus { border-color: var(--yellow); }
+  .send-btn {
+    background: var(--yellow);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.88rem;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: opacity .2s;
+    white-space: nowrap;
+  }
+  .send-btn:hover { opacity: .85; }
+  .send-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .cancel-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    padding: 10px 12px;
+    cursor: pointer;
+  }
+  .cancel-btn:hover { border-color: var(--red); color: var(--red); }
+  .countdown-bar-wrap {
+    margin-top: 10px;
+    background: rgba(0,0,0,0.08);
+    border-radius: 4px;
+    height: 4px;
+    overflow: hidden;
+  }
+  .countdown-bar {
+    height: 4px;
+    background: var(--yellow);
+    border-radius: 4px;
+    transition: width .9s linear;
+  }
+  .countdown-text { font-size: 0.72rem; color: var(--muted); margin-top: 4px; text-align: right; }
+
+  /* ── Thông tin xe vào/ra gần nhất ── */
+  .last-events {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .event-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .event-card .ev-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .event-card.ev-in  .ev-label { color: var(--green); }
+  .event-card.ev-out .ev-label { color: var(--orange); }
+  .event-card .ev-plate {
+    font-family: var(--mono);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    word-break: break-all;
+  }
+  .event-card .ev-time {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+  .event-card .ev-fee {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--orange);
+    margin-top: 3px;
+  }
+
+  /* ── Slots ── */
+  .section-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .slots { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+
+  .slot-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .slot-card:hover:not(.occupied) { border-color: var(--blue); background: var(--surface2); }
+  .slot-card.occupied { cursor: not-allowed; border-color: rgba(248,81,73,0.4); background: rgba(248,81,73,0.06); }
+  .slot-card.booked   { border-color: rgba(210,153,34,0.5); background: rgba(210,153,34,0.06); }
+  .slot-card.expired  { border-color: rgba(207,34,46,0.4); background: rgba(207,34,46,0.05); cursor: not-allowed; }
+
+  /* Đếm ngược thời gian đặt chỗ */
+  .booking-timer {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    font-weight: 700;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .booking-timer .timer-bar-wrap {
+    flex: 1;
+    height: 4px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .booking-timer .timer-bar {
+    height: 4px;
+    border-radius: 2px;
+    transition: width 1s linear, background .5s;
+  }
+  .booking-timer .timer-text {
+    white-space: nowrap;
+    min-width: 44px;
+    text-align: right;
+  }
+  .slot-card.empty    { border-color: rgba(63,185,80,0.3); }
+
+  .slot-num {
+    font-family: var(--mono);
+    font-size: 1.4rem;
+    font-weight: 700;
+    width: 32px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .slot-card.empty    .slot-num { color: var(--green); }
+  .slot-card.booked   .slot-num { color: var(--yellow); }
+  .slot-card.occupied .slot-num { color: var(--red); }
+
+  .slot-info { flex: 1; min-width: 0; }
+  .slot-state {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+  }
+  .slot-card.empty    .slot-state { color: var(--green); }
+  .slot-card.booked   .slot-state { color: var(--yellow); }
+  .slot-card.occupied .slot-state { color: var(--red); }
+
+  .slot-plate {
+    font-family: var(--mono);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .slot-action {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .slot-icon { font-size: 1.4rem; flex-shrink: 0; }
+
+  /* ── Reset ── */
+  .reset-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 10px;
+    padding: 12px;
+    font-family: var(--sans);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: .2s;
+  }
+  .reset-btn:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 0.85rem;
+    color: var(--text);
+    box-shadow: 0 8px 24px rgba(0,0,0,.12);
+    transition: transform .3s ease;
+    z-index: 999;
+    white-space: nowrap;
+    max-width: 90vw;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.ok   { border-color: var(--green); }
+  .toast.err  { border-color: var(--red); }
+  .toast.warn { border-color: var(--yellow); }
+
+  /* ── Modal nhập PIN (đặt chỗ / sửa) ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.35);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 24px 20px;
+    width: 100%;
+    max-width: 360px;
+  }
+  .modal h3 { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+  .modal .sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 18px; }
+  .modal label { font-size: 0.78rem; color: var(--muted); display: block; margin-bottom: 5px; }
+  .modal input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 1rem;
+    padding: 10px 12px;
+    outline: none;
+    margin-bottom: 14px;
+    transition: border-color .2s;
+  }
+  .modal input:focus { border-color: var(--blue); }
+  .modal-btns { display: flex; gap: 8px; }
+  .modal-btns button {
+    flex: 1; padding: 11px; border-radius: 8px;
+    font-family: var(--sans); font-size: 0.88rem; font-weight: 700;
+    cursor: pointer; border: none; transition: opacity .2s;
+  }
+  .modal-btns button:hover { opacity: .85; }
+  .btn-confirm { background: var(--blue); color: #000; }
+  .btn-cancel  { background: var(--surface2); color: var(--muted); border: 1px solid var(--border) !important; }
+  .btn-delete  { background: var(--red); color: #fff; }
+</style>
 </head>
 <body>
 
-<div class="container">
-    <h2>🅿️ Smart Parking TDTU</h2>
-    <p>Cài đặt mã PIN tự chọn (V9 - V12)</p>
-    
-    <button id="btn-v2" class="slot-btn" onclick="handleSlot('v2', 'v9', 1)">Slot 1</button>
-    <button id="btn-v3" class="slot-btn" onclick="handleSlot('v3', 'v10', 2)">Slot 2</button>
-    <button id="btn-v4" class="slot-btn" onclick="handleSlot('v4', 'v11', 3)">Slot 4</button>
-    <button id="btn-v5" class="slot-btn" onclick="handleSlot('v5', 'v12', 4)">Slot 4</button>
+<!-- HEADER -->
+<div class="header">
+  <h1>🅿 Smart Parking TDTU</h1>
+  <p>Quản lý bãi xe thông minh · Blynk IoT</p>
+</div>
 
-    <div id="message" class="status">Sẵn sàng</div>
-    
-    <button class="reset-btn" onclick="resetAllSlots()">♻️ Reset Toàn Bộ Bãi Xe</button>
-    
-    <p class="note">💡 Ô vàng: Nhập PIN để sửa/xóa biển số</p>
+<!-- TỔNG QUAN -->
+<div class="overview">
+  <div class="ov-card free">
+    <div class="num" id="ov-free">–</div>
+    <div class="lbl">Chỗ trống</div>
+  </div>
+  <div class="ov-card used">
+    <div class="num" id="ov-used">–</div>
+    <div class="lbl">Đang đỗ</div>
+  </div>
+  <div class="ov-card total">
+    <div class="num">4</div>
+    <div class="lbl">Tổng slot</div>
+  </div>
+</div>
+
+<!-- ALERT CAMERA: xác nhận biển số + nhập PIN -->
+<div id="cam-alert" class="cam-alert">
+  <div class="alert-head" id="alert-mode-label">🔔 Phát hiện xe</div>
+  <div class="plate-badge" id="alert-plate">–</div>
+  <div class="alert-mode" id="alert-mode-desc">Vui lòng xác nhận biển số</div>
+
+  <!-- BƯỚC 1: Xác nhận biển số -->
+  <div id="confirm-section">
+    <div class="confirm-btns">
+      <button class="btn-correct" onclick="confirmPlate()">✅ Đúng rồi, nhập PIN</button>
+      <button class="btn-retake" onclick="retakePlate()">📸 Chụp lại</button>
+    </div>
+    <button class="cancel-btn" style="width:100%" onclick="cancelPin()">✖ Huỷ</button>
+  </div>
+
+  <!-- BƯỚC 2: Nhập PIN (ẩn cho tới khi xác nhận) -->
+  <div id="pin-section" class="pin-section">
+    <!-- Thông báo sai PIN -->
+    <div id="wrong-pin-msg" class="wrong-pin-msg">
+      ❌ Sai mã PIN! Vui lòng nhập lại.
+      <div class="tries-left" id="tries-left-text"></div>
+    </div>
+    <div class="pin-row">
+      <input class="pin-input" id="pin-input" type="password" maxlength="20" placeholder="Nhập mã PIN...">
+      <button class="send-btn" id="pin-send-btn" onclick="submitPin()">Gửi PIN</button>
+      <button class="cancel-btn" onclick="cancelPin()">Huỷ</button>
+    </div>
+  </div>
+
+  <div class="countdown-bar-wrap">
+    <div class="countdown-bar" id="countdown-bar" style="width:100%"></div>
+  </div>
+  <div class="countdown-text" id="countdown-text">40s</div>
+</div>
+
+<!-- XE VÀO / RA GẦN NHẤT -->
+<div class="last-events">
+  <div class="event-card ev-in">
+    <div class="ev-label">📥 Vào gần nhất</div>
+    <div class="ev-plate" id="last-in-plate">–</div>
+    <div class="ev-time"  id="last-in-time">–</div>
+  </div>
+  <div class="event-card ev-out">
+    <div class="ev-label">📤 Ra gần nhất</div>
+    <div class="ev-plate" id="last-out-plate">–</div>
+    <div class="ev-time"  id="last-out-time">–</div>
+    <div class="ev-fee"   id="last-out-fee"></div>
+  </div>
+</div>
+
+<!-- DANH SÁCH SLOT -->
+<div class="section-title">Trạng thái slots</div>
+<div class="slots" id="slot-list">
+  <!-- render bằng JS -->
+</div>
+
+<!-- RESET -->
+<button class="reset-btn" onclick="resetAll()">♻️ Reset toàn bộ bãi xe (dùng khi test)</button>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h3 id="modal-title">Đặt chỗ</h3>
+    <div class="sub" id="modal-sub">Nhập thông tin bên dưới</div>
+    <div id="modal-body"></div>
+    <div class="modal-btns" id="modal-btns"></div>
+  </div>
 </div>
 
 <script>
-    const AUTH_TOKEN = "8YURsnU3LJgW_eJxrU40lhg4WcLv-NnU";
-    
-    const SLOT_MAP = [
-        { plate: 'v2', pin: 'v9', id: 1 },
-        { plate: 'v3', pin: 'v10', id: 2 },
-        { plate: 'v4', pin: 'v11', id: 3 },
-        { plate: 'v5', pin: 'v12', id: 4 }
-    ];
+// ============================================================
+// CẤU HÌNH – khớp với Python
+// ============================================================
+const TOKEN    = "8YURsnU3LJgW_eJxrU40lhg4WcLv-NnU";
+const BASE     = `https://blynk.cloud/external/api`;
+const SLOT_MAP = [
+  { plate: 'v2', pin: 'v9',  id: 1 },
+  { plate: 'v3', pin: 'v10', id: 2 },
+  { plate: 'v4', pin: 'v11', id: 3 },
+  { plate: 'v5', pin: 'v12', id: 4 },
+];
+// V0  = Python ghi mode+biển (IN-51A12345 / OUT-51A12345) khi cần PIN
+// V1  = Web ghi PIN người dùng nhập → Python đọc
+// V7  = Python ghi thời gian xe ra   (chỉ đọc)
+// V8  = Python ghi biển số xe ra     (chỉ đọc)
+// V13 = Python ghi thời gian xe vào  (chỉ đọc)
+const PIN_TIMEOUT_S = 40; // Phải khớp với wait_pin_from_web() bên Python (80 × 0.5s)
 
-    async function syncStatus() {
-        for (let s of SLOT_MAP) {
-            try {
-                const res = await fetch(`https://blynk.cloud/external/api/get?token=${AUTH_TOKEN}&${s.plate}`);
-                const data = await res.text();
-                const btn = document.getElementById('btn-' + s.plate);
-                
-                if (data.includes("Có xe")) {
-                    btn.className = "slot-btn occupied";
-                    btn.innerText = `Slot ${s.id} (CÓ XE: ${data.split('(')[1]?.replace(')','')})`;
-                    btn.disabled = true;
-                } else if (data.includes("Đã đặt")) {
-                    btn.className = "slot-btn booked";
-                    btn.innerText = `Slot ${s.id} (CHỜ: ${data.split('(')[1]?.replace(')','')})`;
-                    btn.disabled = false;
-                } else {
-                    btn.className = "slot-btn";
-                    btn.innerText = `Đặt Slot ${s.id}`;
-                    btn.disabled = false;
-                }
-            } catch (e) { console.error("Lỗi đồng bộ:", e); }
-        }
+// ============================================================
+// BLYNK HELPER
+// ============================================================
+async function blynkGet(pin) {
+  try {
+    const r = await fetch(`${BASE}/get?token=${TOKEN}&${pin}`);
+    return (await r.text()).replace(/"/g,'').trim();
+  } catch { return ""; }
+}
+async function blynkSet(pin, val) {
+  try {
+    await fetch(`${BASE}/update?token=${TOKEN}&${pin}=${encodeURIComponent(val)}`);
+  } catch {}
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+let _toastTimer;
+function toast(msg, type='ok', ms=3000) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast show ${type}`;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.className='toast', ms);
+}
+
+// ============================================================
+// MODAL
+// ============================================================
+let _modalResolve = null;
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  if (_modalResolve) { _modalResolve(null); _modalResolve = null; }
+}
+function openModal(title, sub, bodyHTML, btns) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-sub').textContent = sub;
+  document.getElementById('modal-body').innerHTML = bodyHTML;
+  const btnEl = document.getElementById('modal-btns');
+  btnEl.innerHTML = '';
+  btns.forEach(b => {
+    const el = document.createElement('button');
+    el.className = b.cls;
+    el.textContent = b.label;
+    el.onclick = b.action;
+    btnEl.appendChild(el);
+  });
+  document.getElementById('modal-overlay').classList.add('open');
+  // Focus vào input đầu tiên nếu có
+  setTimeout(() => { const inp = document.querySelector('#modal-body input'); if(inp) inp.focus(); }, 100);
+  return new Promise(res => { _modalResolve = res; });
+}
+
+// ============================================================
+// SYNC TRẠNG THÁI SLOT → UI
+// ============================================================
+async function syncSlots() {
+  let free = 0, used = 0;
+  for (const s of SLOT_MAP) {
+    const val = await blynkGet(s.plate);
+    renderSlot(s, val);
+    if (val.includes("Có xe"))  used++;
+    else                         free++;
+  }
+  document.getElementById('ov-free').textContent = free;
+  document.getElementById('ov-used').textContent = used;
+}
+
+// Lưu các interval đếm ngược theo slot id
+const _slotTimers = {};
+const BOOKING_DURATION_S = 3600; // 1 giờ, khớp với Python
+
+function parseExpiry(val) {
+  // "Đã đặt (51A-123.45)|exp=1748000000" → trả về số giây Unix hoặc null
+  const m = val.match(/\|exp=(\d+)/);
+  return m ? parseInt(m[1]) : null;
+}
+
+function renderSlot(s, val) {
+  const container = document.getElementById('slot-list');
+  let card = document.getElementById(`slot-${s.plate}`);
+  if (!card) {
+    card = document.createElement('div');
+    card.id = `slot-${s.plate}`;
+    card.className = 'slot-card';
+    card.onclick = () => handleSlot(s);
+    container.appendChild(card);
+  }
+
+  // Dừng timer cũ của slot này (nếu có)
+  if (_slotTimers[s.plate]) {
+    clearInterval(_slotTimers[s.plate]);
+    delete _slotTimers[s.plate];
+  }
+
+  let cls, stateLabel, plateText, actionText, icon, extraHTML = '';
+
+  if (val.includes("Có xe")) {
+    cls        = 'occupied';
+    stateLabel = 'Đang có xe';
+    plateText  = val.includes('(') ? val.split('(')[1].replace(')','') : '–';
+    actionText = 'Không thể tác động khi xe đang đỗ';
+    icon       = '🔴';
+
+  } else if (val.includes("Đã đặt")) {
+    const expTs  = parseExpiry(val);
+    const nowTs  = Math.floor(Date.now() / 1000);
+    const secsLeft = expTs ? (expTs - nowTs) : null;
+
+    if (expTs && secsLeft <= 0) {
+      // Hết hạn → tự xoá trên Blynk luôn
+      blynkSet(s.plate, 'Trống');
+      blynkSet(s.pin, '0');
+      cls        = 'empty';
+      stateLabel = 'Trống';
+      plateText  = '— chưa có xe —';
+      actionText = 'Nhấn để đặt chỗ trước';
+      icon       = '🟢';
+    } else {
+      cls        = 'booked';
+      stateLabel = 'Đã đặt trước';
+      // Lấy biển số (bỏ phần |exp=...)
+      const raw  = val.split('|')[0];
+      plateText  = raw.includes('(') ? raw.split('(')[1].replace(')','') : '–';
+      actionText = 'Nhấn để sửa hoặc huỷ đặt chỗ';
+      icon       = '🟡';
+
+      if (secsLeft !== null) {
+        const timerId = `timer-${s.plate}`;
+        extraHTML = `
+          <div class="booking-timer" id="${timerId}">
+            <div class="timer-bar-wrap">
+              <div class="timer-bar" id="bar-${s.plate}" style="width:${(secsLeft/BOOKING_DURATION_S*100).toFixed(1)}%;background:var(--yellow)"></div>
+            </div>
+            <div class="timer-text" id="txt-${s.plate}" style="color:var(--yellow)"></div>
+          </div>`;
+      }
     }
 
-    async function handleSlot(platePin, pinPin, id) {
-        const btn = document.getElementById('btn-' + platePin);
-        const isBooked = btn.classList.contains('booked');
+  } else {
+    cls        = 'empty';
+    stateLabel = 'Trống';
+    plateText  = '— chưa có xe —';
+    actionText = 'Nhấn để đặt chỗ trước';
+    icon       = '🟢';
+  }
 
-        if (isBooked) {
-            let inputPin = prompt("🔐 Nhập mã PIN để xác thực quyền sửa đổi:");
-            if (!inputPin) return;
+  card.className = `slot-card ${cls}`;
+  card.innerHTML = `
+    <div class="slot-num">${s.id}</div>
+    <div class="slot-info">
+      <div class="slot-state">${stateLabel}</div>
+      <div class="slot-plate">${plateText}</div>
+      ${extraHTML}
+      <div class="slot-action">${actionText}</div>
+    </div>
+    <div class="slot-icon">${icon}</div>`;
 
-            try {
-                const res = await fetch(`https://blynk.cloud/external/api/get?token=${AUTH_TOKEN}&${pinPin}`);
-                let savedPin = await res.text();
-                savedPin = savedPin.replace(/[\[\]\"]/g, "").trim();
-                inputPin = inputPin.trim();
-
-                if (inputPin === savedPin) {
-                    let action = prompt("✅ Đúng PIN!\n- Nhập biển số mới để đổi.\n- Để trống để XÓA đặt chỗ.");
-                    if (action === null) return;
-
-                    if (action.trim() === "") {
-                        await fetch(`https://blynk.cloud/external/api/update?token=${AUTH_TOKEN}&${platePin}=Trống`);
-                        await fetch(`https://blynk.cloud/external/api/update?token=${AUTH_TOKEN}&${pinPin}=0`);
-                    } else {
-                        const newStatus = `Đã đặt (${action.toUpperCase()})`;
-                        await fetch(`https://blynk.cloud/external/api/update?token=${AUTH_TOKEN}&${platePin}=${encodeURIComponent(newStatus)}`);
-                    }
-                    syncStatus();
-                } else {
-                    alert("❌ Sai mã PIN!");
-                }
-            } catch (e) { alert("Lỗi kết nối!"); }
-        } else {
-            let plate = prompt("🚘 Nhập biển số xe:");
-            if (!plate) return;
-            let pin = prompt("🔑 Tạo mã PIN bảo mật:");
-            if (!pin) return;
-
-            const status = `Đã đặt (${plate.toUpperCase()})`;
-            await fetch(`https://blynk.cloud/external/api/update?token=${AUTH_TOKEN}&${platePin}=${encodeURIComponent(status)}`);
-            await fetch(`https://blynk.cloud/external/api/update?token=${AUTH_TOKEN}&${pinPin}=${encodeURIComponent(pin.trim())}`);
-            syncStatus();
+  // Khởi động đếm ngược nếu slot đã đặt còn hạn
+  if (cls === 'booked') {
+    const expTs = parseExpiry(val);
+    if (expTs) {
+      _slotTimers[s.plate] = setInterval(() => {
+        const left = expTs - Math.floor(Date.now() / 1000);
+        const barEl = document.getElementById(`bar-${s.plate}`);
+        const txtEl = document.getElementById(`txt-${s.plate}`);
+        if (!barEl || !txtEl) {
+          clearInterval(_slotTimers[s.plate]);
+          return;
         }
-    }
-
-    // --- HÀM RESET DÀNH CHO TEST ---
-    async function resetAllSlots() {
-        if (!confirm("Phố có chắc muốn xóa sạch dữ liệu và mã PIN để test lại từ đầu không?")) return;
-        
-        const msgDiv = document.getElementById('message');
-        msgDiv.innerText = "⏳ Đang dọn dẹp bãi xe...";
-        msgDiv.style.color = "#ff9800";
-
-        for (let s of SLOT_MAP) {
-            try {
-                // Đưa biển số về trạng thái Trống
-                await fetch(`https://blynk.cloud/external/api/update?token=${AUTH_TOKEN}&${s.plate}=Trống`);
-                // Đưa mã PIN về mặc định (0)
-                await fetch(`https://blynk.cloud/external/api/update?token=${AUTH_TOKEN}&${s.pin}=0`);
-            } catch (e) { console.error("Lỗi khi reset " + s.plate); }
+        if (left <= 0) {
+          clearInterval(_slotTimers[s.plate]);
+          // Hết hạn → xoá Blynk + re-render
+          blynkSet(s.plate, 'Trống');
+          blynkSet(s.pin, '0');
+          renderSlot(s, 'Trống');
+          toast(`⏰ Slot ${s.id} hết hạn đặt chỗ, đã tự giải phóng`, 'warn', 5000);
+          return;
         }
-
-        msgDiv.innerText = "✅ Đã Reset thành công!";
-        msgDiv.style.color = "#28a745";
-        syncStatus();
+        const h   = Math.floor(left / 3600);
+        const m   = Math.floor((left % 3600) / 60);
+        const sec = left % 60;
+        const label = h > 0
+          ? `${h}g ${String(m).padStart(2,'0')}p`
+          : `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+        const pct = (left / BOOKING_DURATION_S * 100).toFixed(1);
+        barEl.style.width = pct + '%';
+        // Đổi màu khi gần hết: xanh → vàng → đỏ
+        const color = left > 1800 ? 'var(--yellow)' : left > 600 ? 'var(--orange)' : 'var(--red)';
+        barEl.style.background = color;
+        txtEl.style.color      = color;
+        txtEl.textContent      = label;
+      }, 1000);
     }
+  }
+}
 
-    window.onload = () => { syncStatus(); setInterval(syncStatus, 8000); };
+// ============================================================
+// SYNC XE VÀO / RA GẦN NHẤT (V0/V13 và V8/V7)
+// ============================================================
+async function syncLastEvents() {
+  // Xe vào: Python ghi V0 = biển, V13 = giờ vào
+  // (V0 còn dùng cho trigger PIN nên chỉ đọc khi không có yêu cầu PIN)
+  const v13 = await blynkGet('V13');
+  const v0raw = await blynkGet('V0');
+  // V0 khi bình thường chứa biển số xe vào, khi chờ PIN chứa "IN-..." hoặc "OUT-..."
+  if (v13 && v13 !== 'null') {
+    document.getElementById('last-in-time').textContent = v13;
+  }
+  if (v0raw && !v0raw.startsWith('IN-') && !v0raw.startsWith('OUT-') && v0raw !== 'null' && v0raw !== '') {
+    document.getElementById('last-in-plate').textContent = v0raw;
+  }
+
+  // Xe ra: Python ghi V8 = biển, V7 = giờ ra
+  const v8 = await blynkGet('V8');
+  const v7 = await blynkGet('V7');
+  if (v8 && v8 !== 'null' && v8 !== '') {
+    document.getElementById('last-out-plate').textContent = v8;
+  }
+  if (v7 && v7 !== 'null' && v7 !== '') {
+    document.getElementById('last-out-time').textContent = v7;
+  }
+}
+
+// ============================================================
+// CAMERA ALERT – 2 bước: xác nhận biển số → nhập PIN
+// ============================================================
+let _waitingPin   = false;
+let _pinCountdown = null;
+let _currentStep  = 'confirm'; // 'confirm' | 'pin'
+
+async function watchV0() {
+  if (_waitingPin) return;
+  const raw = await blynkGet('V0');
+  if (!raw || raw === 'null' || raw === '') return;
+
+  const isConfirm  = raw.startsWith('CONFIRM-');
+  const isPin      = !isConfirm && (raw.startsWith('IN-') || raw.startsWith('OUT-'));
+  const isWrongPin = raw.startsWith('WRONGPIN-');
+  const isLocked   = raw.startsWith('PINLOCKED-');
+
+  if (!isConfirm && !isPin && !isWrongPin && !isLocked) return;
+
+  // ── Khoá PIN: hết lượt nhập ──
+  if (isLocked) {
+    const plate = raw.replace('PINLOCKED-', '');
+    hideCamAlert();
+    toast(`🔒 Nhập sai PIN quá nhiều lần! Xe ${plate} không được ra.`, 'err', 6000);
+    _waitingPin = false;
+    return;
+  }
+
+  // ── Sai PIN: hiện lại ô nhập với thông báo lỗi ──
+  if (isWrongPin) {
+    _waitingPin = true;
+    // Parse: "WRONGPIN-OUT-{plate}|tries={n}"
+    const inner = raw.replace('WRONGPIN-', '');
+    const parts = inner.split('|');
+    const modePlate = parts[0];  // "OUT-51A12345"
+    const triesInfo = parts[1] || '';  // "tries=2"
+    const plate     = modePlate.replace(/^(IN-|OUT-)/, '');
+    const triesLeft = triesInfo.replace('tries=', '');
+
+    document.getElementById('alert-mode-label').textContent = '🔴 XE RA – Sai mã PIN';
+    document.getElementById('alert-plate').textContent      = plate;
+    document.getElementById('alert-mode-desc').textContent  = 'Mã PIN không đúng. Hãy thử lại.';
+    document.getElementById('wrong-pin-msg').style.display  = 'block';
+    document.getElementById('tries-left-text').textContent  = triesLeft ? `Còn ${triesLeft} lần nhập lại` : '';
+
+    // Rung input để gây chú ý
+    const msgEl = document.getElementById('wrong-pin-msg');
+    msgEl.style.animation = 'none';
+    setTimeout(() => { msgEl.style.animation = 'shake .3s ease'; }, 10);
+
+    document.getElementById('confirm-section').style.display = 'none';
+    document.getElementById('pin-section').style.display     = 'block';
+    document.getElementById('pin-input').value               = '';
+    document.getElementById('pin-send-btn').disabled         = false;
+    document.getElementById('cam-alert').style.display       = 'block';
+    setTimeout(() => document.getElementById('pin-input').focus(), 100);
+    startCountdown();
+    return;
+  }
+
+  _waitingPin = true;
+
+  let isIn, plate;
+  if (isConfirm) {
+    const inner = raw.replace('CONFIRM-', '');
+    isIn  = inner.startsWith('IN-');
+    plate = inner.replace(/^(IN-|OUT-)/, '');
+    _currentStep = 'confirm';
+  } else {
+    isIn  = raw.startsWith('IN-');
+    plate = raw.replace(/^(IN-|OUT-)/, '');
+    _currentStep = 'pin';
+  }
+
+  document.getElementById('wrong-pin-msg').style.display = 'none';
+  document.getElementById('alert-mode-label').textContent = isIn
+    ? '🔔 XE VÀO – Xác nhận biển số'
+    : '🔔 XE RA – Xác nhận biển số';
+  document.getElementById('alert-plate').textContent = plate;
+  document.getElementById('alert-mode-desc').textContent = isIn
+    ? 'Camera phát hiện xe VÀO. Biển số bên trên có đúng không?'
+    : 'Camera phát hiện xe RA. Biển số bên trên có đúng không?';
+
+  document.getElementById('confirm-section').style.display = _currentStep === 'confirm' ? 'block' : 'none';
+  document.getElementById('pin-section').style.display     = _currentStep === 'pin'     ? 'block' : 'none';
+
+  if (_currentStep === 'pin') {
+    document.getElementById('alert-mode-label').textContent = isIn
+      ? '🔑 XE VÀO – Nhập PIN mới'
+      : '🔑 XE RA – Xác thực PIN';
+    document.getElementById('alert-mode-desc').textContent = isIn
+      ? 'Biển số đã xác nhận. Hãy TẠO mã PIN bảo mật.'
+      : 'Biển số đã xác nhận. Hãy NHẬP lại mã PIN.';
+    document.getElementById('pin-input').value = '';
+    document.getElementById('pin-send-btn').disabled = false;
+    setTimeout(() => document.getElementById('pin-input').focus(), 100);
+  }
+
+  document.getElementById('cam-alert').style.display = 'block';
+  startCountdown();
+}
+
+function startCountdown() {
+  clearInterval(_pinCountdown);
+  let remaining = PIN_TIMEOUT_S;
+  document.getElementById('countdown-bar').style.width  = '100%';
+  document.getElementById('countdown-text').textContent = `${remaining}s`;
+  _pinCountdown = setInterval(() => {
+    remaining--;
+    const pct = (remaining / PIN_TIMEOUT_S * 100).toFixed(1);
+    document.getElementById('countdown-bar').style.width  = pct + '%';
+    document.getElementById('countdown-text').textContent = `${remaining}s`;
+    if (remaining <= 0) {
+      clearInterval(_pinCountdown);
+      hideCamAlert();
+      toast('⏰ Hết thời gian', 'err');
+      _waitingPin = false;
+    }
+  }, 1000);
+}
+
+function hideCamAlert() {
+  clearInterval(_pinCountdown);
+  document.getElementById('cam-alert').style.display = 'none';
+  document.getElementById('pin-input').value = '';
+  _currentStep = 'confirm';
+}
+
+// Người dùng xác nhận biển số đúng → ghi CONFIRMED → Python chuyển sang bước PIN
+async function confirmPlate() {
+  clearInterval(_pinCountdown);
+  await blynkSet('V1', 'CONFIRMED');
+  // Ẩn bước xác nhận, Python sẽ ghi V0 mới với prefix "IN-/OUT-"
+  // Web tự phát hiện qua watchV0 poll tiếp theo
+  document.getElementById('confirm-section').style.display = 'none';
+  document.getElementById('alert-mode-desc').textContent   = '⏳ Đang chuyển sang bước nhập PIN...';
+  toast('✅ Biển số xác nhận, đang chờ nhập PIN...', 'ok', 3000);
+  // Tiếp tục poll – watchV0 sẽ tự nhận "IN-/OUT-" tiếp theo
+  // Không reset _waitingPin để tránh race condition
+  setTimeout(() => { _waitingPin = false; }, 1500);
+}
+
+// Người dùng yêu cầu chụp lại → ghi RETAKE → Python chụp lại từ đầu
+async function retakePlate() {
+  clearInterval(_pinCountdown);
+  await blynkSet('V1', 'RETAKE');
+  hideCamAlert();
+  toast('📸 Đang chụp lại, vui lòng chờ...', 'warn', 4000);
+  _waitingPin = false;
+}
+
+async function submitPin() {
+  const pin = document.getElementById('pin-input').value.trim();
+  if (!pin) { toast('Vui lòng nhập PIN', 'warn'); return; }
+  document.getElementById('pin-send-btn').disabled = true;
+  await blynkSet('V1', pin);
+  hideCamAlert();
+  toast('✅ Đã gửi PIN, đang chờ Camera xử lý...', 'ok', 5000);
+  setTimeout(async () => {
+    await syncSlots();
+    await syncLastEvents();
+    _waitingPin = false;
+  }, 6000);
+}
+
+async function cancelPin() {
+  await blynkSet('V1', 'CANCEL');
+  hideCamAlert();
+  clearInterval(_pinCountdown);
+  toast('❌ Đã huỷ xác thực', 'err');
+  _waitingPin = false;
+}
+
+// Enter để gửi PIN nhanh
+document.getElementById('pin-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitPin();
+});
+
+// ============================================================
+// XỬ LÝ SLOT (đặt chỗ / sửa / huỷ đặt)
+// ============================================================
+async function handleSlot(s) {
+  const val = await blynkGet(s.plate);
+
+  if (val.includes("Có xe")) {
+    toast('⛔ Slot đang có xe, không thể tác động', 'err');
+    return;
+  }
+
+  if (val.includes("Đã đặt")) {
+    // Yêu cầu xác thực PIN trước
+    const curPlate = val.includes('(') ? val.split('(')[1].replace(')','') : '';
+    const result = await openModal(
+      `Slot ${s.id} – Đã đặt trước`,
+      `Biển: ${curPlate} · Nhập PIN để sửa hoặc huỷ`,
+      `<label>Mã PIN hiện tại</label>
+       <input id="m-pin" type="password" maxlength="20" placeholder="Nhập PIN...">`,
+      [
+        { label: 'Xác nhận', cls: 'btn-confirm', action: () => {
+            const p = document.getElementById('m-pin')?.value.trim();
+            closeModal(); _modalResolve = null;
+            doEditBooked(s, curPlate, p);
+          }
+        },
+        { label: 'Đóng', cls: 'btn-cancel', action: closeModal }
+      ]
+    );
+    return;
+  }
+
+  // Slot trống → đặt chỗ mới
+  openModal(
+    `Đặt chỗ – Slot ${s.id}`,
+    'Nhập biển số và tạo mã PIN bảo mật · Chỗ giữ trong 1 giờ',
+    `<label>Biển số xe</label>
+     <input id="m-plate" type="text" maxlength="12" placeholder="VD: 36M-666.66" style="text-transform:uppercase">
+     <div style="font-size:0.75rem;color:var(--muted);margin:-10px 0 14px;padding:6px 10px;background:var(--surface2);border-radius:6px;border-left:3px solid var(--blue)">
+       💡 <b>Định dạng:</b> 2 số tỉnh + 1 chữ + dấu gạch + 3 số + dấu chấm + 2 số<br>
+       <b>Ví dụ:</b> 36M-666.66 &nbsp;|&nbsp; 51A-123.45 &nbsp;|&nbsp; 29B-567.89
+     </div>
+     <label>Mã PIN (ghi nhớ để ra xe)</label>
+     <input id="m-pin" type="password" maxlength="20" placeholder="Tạo mã PIN...">`,
+    [
+      { label: 'Đặt chỗ', cls: 'btn-confirm', action: async () => {
+          const plate = document.getElementById('m-plate')?.value.trim().toUpperCase();
+          const pin   = document.getElementById('m-pin')?.value.trim();
+          closeModal(); _modalResolve = null;
+          if (!plate || !pin) { toast('Vui lòng điền đầy đủ thông tin', 'warn'); return; }
+          if (await checkDuplicate(plate)) return;
+          // Lưu kèm timestamp hết hạn (1 giờ = 3600 giây)
+          const expTs = Math.floor(Date.now() / 1000) + 3600;
+          await blynkSet(s.plate, `Đã đặt (${plate})|exp=${expTs}`);
+          await blynkSet(s.pin, pin);
+          toast(`✅ Đã đặt Slot ${s.id} cho ${plate} · Hết hạn sau 1 giờ`, 'ok', 4000);
+          syncSlots();
+        }
+      },
+      { label: 'Huỷ', cls: 'btn-cancel', action: closeModal }
+    ]
+  );
+}
+
+async function doEditBooked(s, curPlate, inputPin) {
+  const saved = await blynkGet(s.pin);
+  if (inputPin !== saved.replace(/[\[\]"]/g,'').trim()) {
+    toast('❌ Sai mã PIN!', 'err');
+    return;
+  }
+
+  // Lấy expiry hiện tại để giữ nguyên khi sửa biển
+  const curVal = await blynkGet(s.plate);
+  const expTs  = parseExpiry(curVal);
+  const expSuffix = expTs ? `|exp=${expTs}` : '';
+  // Thời gian còn lại hiển thị
+  const secsLeft = expTs ? Math.max(0, expTs - Math.floor(Date.now()/1000)) : null;
+  const timeLabel = secsLeft !== null
+    ? `Còn ${Math.floor(secsLeft/60)} phút`
+    : 'Không rõ hạn';
+
+  openModal(
+    `Sửa đặt chỗ – Slot ${s.id}`,
+    `Biển hiện tại: ${curPlate} · ${timeLabel}`,
+    `<label>Biển số mới (để trống = huỷ đặt chỗ)</label>
+     <input id="m-newplate" type="text" maxlength="12" placeholder="VD: 36M-666.66 — để trống để huỷ" style="text-transform:uppercase">
+     <div style="font-size:0.75rem;color:var(--muted);margin:-10px 0 14px;padding:6px 10px;background:var(--surface2);border-radius:6px;border-left:3px solid var(--blue)">
+       💡 <b>Ví dụ:</b> 36M-666.66 &nbsp;|&nbsp; 51A-123.45 &nbsp;|&nbsp; 29B-567.89
+     </div>`,
+    [
+      { label: 'Lưu', cls: 'btn-confirm', action: async () => {
+          const newPlate = document.getElementById('m-newplate')?.value.trim().toUpperCase();
+          closeModal(); _modalResolve = null;
+          if (newPlate === '') {
+            await blynkSet(s.plate, 'Trống');
+            await blynkSet(s.pin, '0');
+            toast(`🗑 Đã huỷ đặt chỗ Slot ${s.id}`, 'warn');
+          } else {
+            if (await checkDuplicate(newPlate, s.plate)) return;
+            // Giữ nguyên thời gian hết hạn cũ
+            await blynkSet(s.plate, `Đã đặt (${newPlate})${expSuffix}`);
+            toast(`✅ Đã cập nhật Slot ${s.id} → ${newPlate}`, 'ok');
+          }
+          syncSlots();
+        }
+      },
+      { label: 'Huỷ đặt chỗ', cls: 'btn-delete', action: async () => {
+          closeModal(); _modalResolve = null;
+          await blynkSet(s.plate, 'Trống');
+          await blynkSet(s.pin, '0');
+          toast(`🗑 Đã huỷ đặt chỗ Slot ${s.id}`, 'warn');
+          syncSlots();
+        }
+      },
+      { label: 'Đóng', cls: 'btn-cancel', action: closeModal }
+    ]
+  );
+}
+
+// ============================================================
+// KIỂM TRA TRÙNG BIỂN
+// ============================================================
+async function checkDuplicate(newPlate, skipSlotPin = null) {
+  for (const s of SLOT_MAP) {
+    if (s.plate === skipSlotPin) continue;
+    const v = await blynkGet(s.plate);
+    // Bỏ phần |exp=... trước khi so sánh
+    const vClean = v.split('|')[0];
+    if (vClean.toUpperCase().includes(newPlate)) {
+      toast(`❌ Biển ${newPlate} đã tồn tại trong bãi (Slot ${s.id})`, 'err', 4000);
+      return true;
+    }
+  }
+  return false;
+}
+
+// ============================================================
+// RESET TOÀN BỘ
+// ============================================================
+async function resetAll() {
+  const ok = await openModal(
+    '♻️ Reset toàn bộ bãi xe',
+    'Thao tác này xoá sạch tất cả slot, PIN và dữ liệu Blynk.',
+    `<p style="color:var(--red);font-size:.85rem;margin-bottom:8px">⚠️ Không thể hoàn tác!</p>
+     <label>Nhập "RESET" để xác nhận</label>
+     <input id="m-confirm" type="text" placeholder="RESET">`,
+    [
+      { label: 'Xác nhận Reset', cls: 'btn-delete', action: async () => {
+          const conf = document.getElementById('m-confirm')?.value.trim();
+          closeModal(); _modalResolve = null;
+          if (conf !== 'RESET') { toast('Nhập sai từ xác nhận', 'err'); return; }
+          toast('⏳ Đang reset...', 'warn', 8000);
+          for (const s of SLOT_MAP) {
+            await blynkSet(s.plate, 'Trống');
+            await blynkSet(s.pin, '0');
+          }
+          // Xoá luôn các pin thông báo
+          await blynkSet('V0', '');
+          await blynkSet('V1', '');
+          await blynkSet('V7', '');
+          await blynkSet('V8', '');
+          await blynkSet('V13', '');
+          toast('✅ Reset thành công!', 'ok');
+          syncSlots();
+          syncLastEvents();
+        }
+      },
+      { label: 'Đóng', cls: 'btn-cancel', action: closeModal }
+    ]
+  );
+}
+
+// ============================================================
+// POLLING
+// ============================================================
+// V0 poll nhanh (2s) để phát hiện ngay khi Python cần PIN
+// Slot + events poll chậm hơn (6s) để giảm request
+setInterval(watchV0,       2000);
+setInterval(syncSlots,     6000);
+setInterval(syncLastEvents, 6000);
+
+// Khởi động
+(async () => {
+  await syncSlots();
+  await syncLastEvents();
+})();
 </script>
 </body>
 </html>
